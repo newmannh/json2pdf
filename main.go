@@ -64,10 +64,10 @@ func generatePdf() {
 	// pdf.Ln(2)
 	// pdf.SetFontSize()
 	lineHeight := fontSize + 2
-	pdf.CellFormat(0.22*width, lineHeight, "Make", "1", 0, "", false, 0, "")
-	pdf.CellFormat(0.22*width, lineHeight, "Model", "1", 0, "", false, 0, "")
-	pdf.CellFormat(0.22*width, lineHeight, "Serial #", "1", 0, "", false, 0, "")
-	pdf.CellFormat(0.34*width, lineHeight, "Equipment #", "1", 1, "", false, 0, "")
+	pdf.CellFormat(0.22*width, lineHeight, "Make:", "1", 0, "", false, 0, "")
+	pdf.CellFormat(0.22*width, lineHeight, "Model:", "1", 0, "", false, 0, "")
+	pdf.CellFormat(0.22*width, lineHeight, "Serial #:", "1", 0, "", false, 0, "")
+	pdf.CellFormat(0.34*width, lineHeight, "Equipment #:", "1", 1, "", false, 0, "")
 
 	pdf.SetFontSize(8)
 	pdf.Ln(1)
@@ -117,6 +117,7 @@ func generatePdf() {
 
 	pdf.SetFontSize(10)
 	printCheckOffLine("AED")
+	pdf.Ln(2)
 
 	for _, label := range []string{"S/N", "Pad Exp.", "Battery Exp.", "Placed in Service"} {
 		pdf.CellFormat(0.25*width, lineHeight, label, "1", 0, "C", false, 0, "")
