@@ -1,22 +1,75 @@
 package main
 
 import (
+	"code.google.com/p/gofpdf"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-
-	"code.google.com/p/gofpdf"
 )
 
-//TODO:
-//week -> inspection
-//generated numbers
-//change one of the items (see basecamp)
+//TODO: JSON
+/*
+
+{
+   "trailer":{
+      "companyNumber":"1",
+      "DOTNumber":"123",
+      "serialNumber":"123",
+      "make":"Black Ford 2013",
+      "location":"Winter Pad",
+      "operator":"Operator Inc.",
+      "fracCompany":"Fracking Co."
+   },
+   "inspections":[
+      {
+         "date":"(parse date format, don’t know)",
+         "notes":"I just made a sandwich i didn’t do my job",
+         "by":"Logan Spears"
+      }
+   ],
+   "AED":{
+      "serialNumber":"aaa",
+      "padExpirationDate":"(parse date format, don’t know)",
+      "batteryExpirationDate":"(parse date format, don’t know)",
+      "inServiceDate":"(parse date format, don’t know)"
+   }
+}
+
+*/
+
+type trailerObj struct {
+	CompanyNumber string
+	DOTNumber     string
+	SerialNumber  string
+	Make          string
+	Location      string
+	Operator      string
+	FracCompany   string
+}
+
+type inspectionObj struct {
+	Date  string
+	Notes string
+	By    string
+}
+
+type aedObj struct {
+	SerialNumber          string
+	PadExpirationDate     string
+	BatteryExpirationDate string
+	InServiceDate         string
+}
+
+type FormData1 struct {
+	Trailer     trailerObj
+	Inspections []inspectionObj
+	AED         aedObj
+}
 
 func main() {
 	fmt.Printf("Hello, world.\n")
 	parseJson("example.json")
-	generatePdf2()
+	generatePdf1()
 }
 
 func parseJson(filename string) {
@@ -26,13 +79,13 @@ func parseJson(filename string) {
 		return
 	}
 
-	var v interface{}
-	if err = json.Unmarshal(bytes, &v); err != nil {
+	var doc1 FormData1
+	if err = json.Unmarshal(bytes, &doc1); err != nil {
 		fmt.Printf("Unable to unmarshal JSON file due to", err.Error())
 		return
 	}
 
-	fmt.Println("Unmarshaling succesful; value obtained:\n", v)
+	fmt.Println("Unmarshaling succesful; value obtained:\n", doc1)
 
 }
 
@@ -81,19 +134,27 @@ func generatePdf1() {
 	pdf.CellFormat(0.5*width, lineHeight, "Inspection #:  ", "1", 0, "R", false, 0, "")
 	numDivs := 12
 
-	printBlanks := func(numDivs int, wdth float64) {
+	printCheckBoxes := func(numDivs, numChecked int, wdth float64, useNumbersInsteadOfChecks bool) {
 		for i := 0; i < numDivs; i++ {
-			pdf.CellFormat(wdth/float64(numDivs), lineHeight, "", "1", 0, "", false, 0, "")
+			str := ""
+			if i < numChecked {
+				if useNumbersInsteadOfChecks {
+					str = fmt.Sprintf("%d", i+1)
+				} else {
+					pdf.Image("check_mark.png", pdf.GetX(), pdf.GetY(), 0.5*width/float64(numDivs), 0, false, "", 0, "")
+				}
+			}
+			pdf.CellFormat(wdth/float64(numDivs), lineHeight, str, "1", 0, "C", false, 0, "")
 		}
 	}
 
-	printBlanks(numDivs, 0.5*width)
+	printCheckBoxes(numDivs, 12, 0.5*width, true)
 	pdf.Ln(lineHeight + 1)
 
 	pdf.SetFontSize(10)
 	printCheckOffLine := func(label string) {
 		pdf.CellFormat(0.5*width, lineHeight, label, "1", 0, "", false, 0, "")
-		printBlanks(numDivs, 0.5*width)
+		printCheckBoxes(numDivs, 12, 0.5*width, false)
 		pdf.Ln(lineHeight)
 	}
 
@@ -133,13 +194,15 @@ func generatePdf1() {
 	pdf.Ln(lineHeight + 4)
 
 	pdf.SetFontSize(11)
-	pdf.CellFormat(0.9*width, lineHeight-2, "Inspection Notes:", "", 0, "", false, 0, "")
-	pdf.CellFormat(0.1*width, lineHeight-2, "Initial", "1", 1, "C", false, 0, "")
+	pdf.CellFormat(0.78*width, lineHeight-2, "Inspection Notes:", "", 0, "", false, 0, "")
+	pdf.CellFormat(0.11*width, lineHeight-2, "Employee", "1", 0, "C", false, 0, "")
+	pdf.CellFormat(0.11*width, lineHeight-2, "Date", "1", 1, "C", false, 0, "")
 
 	for i := 1; i <= 12; i++ {
-		pdf.CellFormat(0.2*width, lineHeight, "Inspection #: ", "1", 0, "", false, 0, "")
-		pdf.CellFormat(0.7*width, lineHeight, "", "1", 0, "", false, 0, "")
-		pdf.CellFormat(0.1*width, lineHeight, "", "1", 1, "", false, 0, "")
+		pdf.CellFormat(0.17*width, lineHeight, "Inspection #: ", "1", 0, "", false, 0, "")
+		pdf.CellFormat(0.61*width, lineHeight, "", "1", 0, "", false, 0, "")
+		pdf.CellFormat(0.11*width, lineHeight, "", "1", 0, "", false, 0, "")
+		pdf.CellFormat(0.11*width, lineHeight, "", "1", 1, "", false, 0, "")
 	}
 
 	pdf.OutputFileAndClose("example1.pdf")

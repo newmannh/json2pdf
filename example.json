@@ -1,13 +1,24 @@
-{
-	"1" : {
-		"foo": "hello",
-		"bar": [1, "22", false],
-		"a": null,
-		"abc": {
-			"a": 1,
-			"b": 2,
-			"c": [1,2,3,"abc",{"a":1,"b":2,"c":{"a":"123"}}]
-		}
-	}
-
+{  
+   "trailer":{  
+      "companyNumber":"1",
+      "DOTNumber":"123",
+      "serialNumber":"123",
+      "make":"Black Ford 2013",
+      "location":"Winter Pad",
+      "operator":"Operator Inc.",
+      "fracCompany":"Fracking Co."
+   },
+   "inspections":[  
+      {  
+         "date":"(parse date format, don’t know)",
+         "notes":"I just made a sandwich i didn’t do my job",
+         "by":"Logan Spears"
+      }
+   ],
+   "AED":{  
+      "serialNumber":"aaa",
+      "padExpirationDate":"(parse date format, don’t know)",
+      "batteryExpirationDate":"(parse date format, don’t know)",
+      "inServiceDate":"(parse date format, don’t know)"
+   }
 }
