@@ -37,59 +37,77 @@ import (
 
 */
 
-type trailerObj struct {
-	CompanyNumber string
-	DOTNumber     string
-	SerialNumber  string
-	Make          string
-	Location      string
-	Operator      string
-	FracCompany   string
-}
-
-type inspectionObj struct {
-	Date  string
-	Notes string
-	By    string
-}
-
-type aedObj struct {
-	SerialNumber          string
-	PadExpirationDate     string
-	BatteryExpirationDate string
-	InServiceDate         string
-}
-
 type FormData1 struct {
-	Trailer     trailerObj
-	Inspections []inspectionObj
-	AED         aedObj
+	Trailer struct {
+		FracCompany     string `json:"fracCompany"`
+		Operator        string `json:"operator"`
+		Location        string `json:"location"`
+		Make            string `json:"make"`
+		Model           string `json:"model"`
+		SerialNumber    string `json:"serialNumber"`
+		EquipmentNumber string `json:"equipmentNumber"`
+	} `json:"trailer"`
+	Inspections []struct {
+		Date  string `json:"date"`
+		Notes string `json:"notes"`
+		By    string `json:"by"`
+	} `json:"inspections"`
+	AED struct {
+		SerialNumber          string `json:"serialNumber"`
+		PadExpirationDate     string `json:"padExpirationDate"`
+		BatteryExpirationDate string `json:"batteryExpirationDate"`
+		InServiceDate         string `json:"inServiceDate"`
+	} `json:"AED"`
 }
 
 func main() {
 	fmt.Printf("Hello, world.\n")
-	parseJson("example.json")
-	generatePdf1()
+	// generatePdf1(parseJson("example.json", 1).(FormData1))
+	generatePdf3(parseJson("form3data.json", 3).(Form3Data))
 }
 
-func parseJson(filename string) {
+func parseJson(filename string, form int) interface{} {
 	bytes, err := ioutil.ReadFile(filename)
 	if err != nil {
 		fmt.Printf("Unable to read file", filename, "due to", err.Error())
-		return
+		return FormData1{}
 	}
 
-	var doc1 FormData1
-	if err = json.Unmarshal(bytes, &doc1); err != nil {
-		fmt.Printf("Unable to unmarshal JSON file due to", err.Error())
-		return
+	switch form {
+	case 1:
+		var data FormData1
+		if err = json.Unmarshal(bytes, &data); err != nil {
+			fmt.Printf("Unable to unmarshal JSON file due to", err.Error())
+			return FormData1{}
+		}
+		return data
+	case 3:
+		var data Form3Data
+		if err = json.Unmarshal(bytes, &data); err != nil {
+			fmt.Printf("Unable to unmarshal JSON file due to", err.Error())
+			return Form3Data{}
+		}
+		return data
+	default:
+		fmt.Println("An error occurred: unknown form type (", form, ")")
+		return nil
 	}
-
-	fmt.Println("Unmarshaling succesful; value obtained:\n", doc1)
-
 }
 
-func generatePdf1() {
+func writeText(txt string, width, height float64, placementAfter int, box bool, pdf *gofpdf.Fpdf) {
+	initialFontSize, _ := pdf.GetFontSize()
+	for fontSize := initialFontSize; pdf.GetStringWidth(txt) >= width-1.5; fontSize = fontSize - 1 {
+		pdf.SetFontSize(fontSize)
+	}
+	boxStr := ""
+	if box {
+		boxStr = "1"
+	}
+	pdf.CellFormat(width, height, txt, boxStr, placementAfter, "C", false, 0, "")
+	pdf.SetFontSize(initialFontSize)
+}
+
+func generatePdf1(data FormData1) {
 	pdf := gofpdf.New("P", "mm", "A4", "")
 	pdf.AddPage()
 	pdf.SetFont("Arial", "", 15)
@@ -113,17 +131,44 @@ func generatePdf1() {
 	pdf.SetFontSize(11)
 	pdf.Text(initialColYs[1], top+10+fontSize, "Inspection Report")
 	pdf.SetXY(initialColYs[2], top)
-	pdf.MultiCell(initialColWidths[2], 2, "\nFrac Co.\n\n\n\n\nOperator\n\n\n\n\n", "1", "T", false)
+	pdf.CellFormat(initialColWidths[2], 7, "Frac Co.", "1", 2, "C", false, 0, "")
+	pdf.CellFormat(initialColWidths[2], 7, "Operator", "1", 2, "C", false, 0, "")
+	pdf.CellFormat(initialColWidths[2], 7, "Location", "1", 1, "C", false, 0, "")
 	pdf.SetXY(initialColYs[3], top)
-	pdf.CellFormat(initialColWidths[3], 7, "", "1", 2, "", false, 0, "")
-	pdf.CellFormat(initialColWidths[3], 15, "", "1", 1, "", false, 0, "")
-	// pdf.Ln(2)
-	// pdf.SetFontSize()
+
+	writeText(data.Trailer.FracCompany, initialColWidths[3], 7, 2, true, pdf)
+	writeText(data.Trailer.Operator, initialColWidths[3], 7, 2, true, pdf)
+	writeText(data.Trailer.Location, initialColWidths[3], 7, 1, true, pdf)
+
 	lineHeight := fontSize + 2
-	pdf.CellFormat(0.22*width, lineHeight, "Make:", "1", 0, "", false, 0, "")
-	pdf.CellFormat(0.22*width, lineHeight, "Model:", "1", 0, "", false, 0, "")
-	pdf.CellFormat(0.22*width, lineHeight, "Serial #:", "1", 0, "", false, 0, "")
-	pdf.CellFormat(0.34*width, lineHeight, "Equipment #:", "1", 1, "", false, 0, "")
+
+	type MMSE struct {
+		Label string
+		Width float64
+		Value string
+	}
+
+	mmseLine := []MMSE{
+		{Label: "Make:", Width: 0.22 * width, Value: data.Trailer.Make},
+		{Label: "Model:", Width: 0.22 * width, Value: data.Trailer.Model},
+		{Label: "Serial #:", Width: 0.22 * width, Value: data.Trailer.SerialNumber},
+		{Label: "Equipment #:", Width: 0.34 * width, Value: data.Trailer.EquipmentNumber},
+	}
+
+	for index, mmseElement := range mmseLine {
+		labelWidth := pdf.GetStringWidth(mmseElement.Label)
+		valueStart := pdf.GetX() + labelWidth
+		valueWidth := mmseElement.Width - labelWidth
+
+		pdf.CellFormat(mmseElement.Width, lineHeight, mmseElement.Label, "1", 0, "", false, 0, "")
+
+		placementAfter := 0
+		if index >= len(mmseLine)-1 {
+			placementAfter = 1
+		}
+		pdf.SetX(valueStart)
+		writeText(mmseElement.Value, valueWidth, lineHeight, placementAfter, false, pdf)
+	}
 
 	pdf.SetFontSize(8)
 	pdf.Ln(1)
@@ -154,7 +199,7 @@ func generatePdf1() {
 	pdf.SetFontSize(10)
 	printCheckOffLine := func(label string) {
 		pdf.CellFormat(0.5*width, lineHeight, label, "1", 0, "", false, 0, "")
-		printCheckBoxes(numDivs, 12, 0.5*width, false)
+		printCheckBoxes(numDivs, len(data.Inspections), 0.5*width, false)
 		pdf.Ln(lineHeight)
 	}
 
@@ -187,8 +232,9 @@ func generatePdf1() {
 		pdf.CellFormat(0.25*width, lineHeight, label, "1", 0, "C", false, 0, "")
 	}
 	pdf.Ln(lineHeight)
-	for i := 0; i < 4; i++ {
-		pdf.CellFormat(0.25*width, lineHeight, "", "1", 0, "C", false, 0, "")
+	for _, value := range []string{data.AED.SerialNumber, data.AED.PadExpirationDate, data.AED.BatteryExpirationDate, data.AED.InServiceDate} {
+		writeText(value, 0.25*width, lineHeight, 0, true, pdf)
+		// pdf.CellFormat(0.25*width, lineHeight, "", "1", 0, "C", false, 0, "")
 	}
 
 	pdf.Ln(lineHeight + 4)
@@ -198,7 +244,21 @@ func generatePdf1() {
 	pdf.CellFormat(0.11*width, lineHeight-2, "Employee", "1", 0, "C", false, 0, "")
 	pdf.CellFormat(0.11*width, lineHeight-2, "Date", "1", 1, "C", false, 0, "")
 
-	for i := 1; i <= 12; i++ {
+	for index, inspection := range data.Inspections {
+		str := "Inspection #:"
+		strWidth := pdf.GetStringWidth(str)
+		cell1Width := 0.17 * width
+		numberWidth := cell1Width - strWidth
+		numberStart := pdf.GetX() + strWidth
+
+		pdf.CellFormat(cell1Width, lineHeight, str, "1", 0, "", false, 0, "")
+		pdf.SetX(numberStart)
+		writeText(fmt.Sprintf("%d", index+1), numberWidth, lineHeight, 0, false, pdf)
+		writeText(inspection.Notes, 0.61*width, lineHeight, 0, true, pdf)
+		writeText(inspection.By, 0.11*width, lineHeight, 0, true, pdf)
+		writeText(inspection.Date, 0.11*width, lineHeight, 1, true, pdf)
+	}
+	for i := len(data.Inspections) + 1; i <= 12; i++ {
 		pdf.CellFormat(0.17*width, lineHeight, "Inspection #: ", "1", 0, "", false, 0, "")
 		pdf.CellFormat(0.61*width, lineHeight, "", "1", 0, "", false, 0, "")
 		pdf.CellFormat(0.11*width, lineHeight, "", "1", 0, "", false, 0, "")
@@ -208,6 +268,15 @@ func generatePdf1() {
 	pdf.OutputFileAndClose("example1.pdf")
 }
 
+/*
+
+
+
+THE SECOND PDF
+
+
+
+*/
 func generatePdf2() {
 	pdf := gofpdf.New("P", "mm", "A4", "")
 	pdf.AddPage()
@@ -360,4 +429,71 @@ func generatePdf2() {
 	twoTabbedWeirdLine("Print Name", "Date", "Print Name", "Date", lineHeight)
 
 	pdf.OutputFileAndClose("example2.pdf")
+}
+
+/*
+
+
+Form 3
+
+*/
+
+type Form3Data struct {
+	Trailer struct {
+		CompanyNumber string `json:"companyNumber"`
+		DOTNumber     string `json:"DOTNumber"`
+		SerialNumber  string `json:"serialNumber"`
+		Make          string `json:"make"`
+		Location      string `json:"location"`
+		Operator      string `json:"operator"`
+		FracCompany   string `json:"fracCompany"`
+	} `json:"trailer"`
+	TruckNumber        string `json:"truckNumber"`
+	Odometer           int    `json:"odometer"`
+	Remarks            string `json:"remarks"`
+	DriverSignatureUrl string `json:"driverSignatureUrl"`
+	Date               string `json:"date"`
+}
+
+func generatePdf3(data Form3Data) {
+
+	type TextPoint struct {
+		Value string
+		X     float64
+		Y     float64
+	}
+	points := map[string]TextPoint{
+		"companyNumber": {data.Trailer.CompanyNumber, 50, 116.5},
+		"dotNumber":     {data.Trailer.DOTNumber, 50, 116.5},
+		"serialNumber":  {data.Trailer.SerialNumber, 50, 116.5},
+		"make":          {data.Trailer.Make, 10, 10},
+		"location":      {data.Trailer.Location, 10, 10},
+		"operator":      {data.Trailer.Operator, 10, 10},
+		"fracCompany":   {data.Trailer.FracCompany, 10, 10},
+		"truckNumber":   {data.TruckNumber, 60, 66},
+		"odometer":      {fmt.Sprintf("%d", data.Odometer), 160, 66},
+		"remarks":       {data.Remarks, 40, 145},
+		"driverSigUrl1": {data.DriverSignatureUrl, 20, 241},
+		"driverSigUrl2": {data.DriverSignatureUrl, 20, 175},
+		"date":          {data.Date, 130, 241},
+		"date2":         {data.Date, 130, 175},
+	}
+
+	pdf := gofpdf.New("P", "mm", "A4", "")
+	pdf.AddPage()
+	pdf.SetFont("Arial", "", 10)
+	pageW, pageH := pdf.GetPageSize()
+	pdf.Image("form3raw.png", 0, 0, pageW, 0, false, "", 0, "")
+
+	for _, point := range points {
+		pdf.Text(point.X, point.Y, point.Value)
+	}
+
+	for x := 0.0; x <= pageW; x = x + 10.0 {
+		for y := 0.0; y <= pageH; y = y + 10.0 {
+			// pdf.Text(x, y, fmt.Sprintf("(%.f,%.f)", x, y))
+		}
+	}
+
+	pdf.OutputFileAndClose("example3.pdf")
 }

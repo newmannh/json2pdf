@@ -3,22 +3,39 @@
       "companyNumber":"1",
       "DOTNumber":"123",
       "serialNumber":"123",
-      "make":"Black Ford 2013",
+      "make":"Ford",
+      "model":"Lemon",
+      "equipmentNumber":"123ABCUnMe",
       "location":"Winter Pad",
-      "operator":"Operator Inc.",
-      "fracCompany":"Fracking Co."
+      "operator":"Smooooth",
+      "fracCompany":"Mother Frackers, Inc."
    },
    "inspections":[  
       {  
          "date":"(parse date format, don’t know)",
          "notes":"I just made a sandwich i didn’t do my job",
          "by":"Logan Spears"
+      },
+      {  
+         "date":"7",
+         "notes":"B Flat",
+         "by":"Logan Spears"
+      },
+      {  
+         "date":"Oct 3 2020",
+         "notes":"Time flies like an arrow.",
+         "by":"Logan Spears"
+      },
+      {  
+         "date":"100 BCE",
+         "notes":"Buffalo buffalo buffalo buffalo buffalo buffalo buffalo buffalo buffalo.",
+         "by":"Logan Spears"
       }
    ],
    "AED":{  
-      "serialNumber":"aaa",
-      "padExpirationDate":"(parse date format, don’t know)",
-      "batteryExpirationDate":"(parse date format, don’t know)",
-      "inServiceDate":"(parse date format, don’t know)"
+      "serialNumber":"Cereal Numba 1!",
+      "padExpirationDate":"Tomorrow",
+      "batteryExpirationDate":"Day After Tomorrow",
+      "inServiceDate":"Day Before Day After Tomorrow"
    }
 }

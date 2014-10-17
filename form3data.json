@@ -1,0 +1,16 @@
+{
+  "trailer": {
+    "companyNumber": "1",
+    "DOTNumber": "123",
+    "serialNumber": "123",
+    "make": "Black Ford 2013",
+    "location": "Winter Pad",
+    "operator": "Operator Inc.",
+    "fracCompany": "Fracking Co."
+  },
+  "truckNumber": "1",
+  "odometer": 10000,
+  "remarks": "It don't smell so good",
+  "driverSignatureUrl": "http:\/\/sss.com\/image.png",
+  "date": "(parse date format, don\u2019t know)"
+}
