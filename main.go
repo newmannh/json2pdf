@@ -96,7 +96,7 @@ func parseJson(filename string, form int) interface{} {
 
 func writeText(txt string, width, height float64, placementAfter int, box bool, pdf *gofpdf.Fpdf) {
 	initialFontSize, _ := pdf.GetFontSize()
-	for fontSize := initialFontSize; pdf.GetStringWidth(txt) >= width-1.5; fontSize = fontSize - 1 {
+	for fontSize := initialFontSize; pdf.GetStringWidth(txt) >= width-1.5; fontSize = fontSize - 0.1 {
 		pdf.SetFontSize(fontSize)
 	}
 	boxStr := ""
@@ -461,38 +461,147 @@ func generatePdf3(data Form3Data) {
 		Value string
 		X     float64
 		Y     float64
+		Width float64
 	}
-	points := map[string]TextPoint{
-		"companyNumber": {data.Trailer.CompanyNumber, 50, 116.5},
-		"dotNumber":     {data.Trailer.DOTNumber, 50, 116.5},
-		"serialNumber":  {data.Trailer.SerialNumber, 50, 116.5},
-		"make":          {data.Trailer.Make, 10, 10},
-		"location":      {data.Trailer.Location, 10, 10},
-		"operator":      {data.Trailer.Operator, 10, 10},
-		"fracCompany":   {data.Trailer.FracCompany, 10, 10},
-		"truckNumber":   {data.TruckNumber, 60, 66},
-		"odometer":      {fmt.Sprintf("%d", data.Odometer), 160, 66},
-		"remarks":       {data.Remarks, 40, 145},
-		"driverSigUrl1": {data.DriverSignatureUrl, 20, 241},
-		"driverSigUrl2": {data.DriverSignatureUrl, 20, 175},
-		"date":          {data.Date, 130, 241},
-		"date2":         {data.Date, 130, 175},
+	textPoints := map[string]TextPoint{
+		"companyNumber": {data.Trailer.CompanyNumber, 50, 113.15, 137}, // trailer number(s)?
+		// "dotNumber":     {data.Trailer.DOTNumber, 50, 116.5, 30},       // trailer number(s)?
+		// "serialNumber":  {data.Trailer.SerialNumber, 50, 116.5, 30},    // trailer number(s)?
+
+		// "make":          {data.Trailer.Make, 10, 10, 30},
+		// "location":      {data.Trailer.Location, 10, 10, 30},
+		// "operator":      {data.Trailer.Operator, 10, 10, 30},
+		// "fracCompany":   {data.Trailer.FracCompany, 10, 10, 30},
+
+		"truckNumber": {data.TruckNumber, 56, 62.7, 78},
+		"odometer":    {fmt.Sprintf("%d", data.Odometer), 156, 62.7, 32},
+		// "remarks":       {data.Remarks, 39, 142.5, 149},
+		// "remarks2":      {"Remarks2 Remarks 2 Remarks2 Remarks 2 Remarks2 Remarks 2 Remarks2 Remarks 2r", 19, 151, 170},
+		// "remarks3":      {"Remarks3 Remarks 3 Remarks3 Remarks 3 Remarks3 Remarks 3 Remarks3 Remarks 3rr", 19, 159, 170},
+		"driverSigUrl1": {data.DriverSignatureUrl, 19, 238.5, 89},
+		"driverSigUrl2": {data.DriverSignatureUrl, 19, 171.5, 89},
+		"date":          {data.Date, 130, 238.5, 54.6},
+		"date2":         {data.Date, 130, 171.5, 54.6},
+	}
+
+	writeRemarks := func(remarks string, pdf *gofpdf.Fpdf) {
+		remarksLen := pdf.GetStringWidth(remarks)
+		const (
+			line1Len float64 = 147
+			line2Len float64 = 168
+			line3Len float64 = 168
+			total    float64 = line1Len + line2Len + line3Len
+		)
+
+		oldFontSize, lineHeight := pdf.GetFontSize()
+		for fontSize := oldFontSize; remarksLen > total; fontSize = fontSize - 1 {
+			pdf.SetFontSize(fontSize)
+			remarksLen = pdf.GetStringWidth(remarks)
+		}
+
+		breakIndex1 := int((line1Len / remarksLen) * float64(len(remarks)))
+		breakIndex2 := int(((line1Len + line2Len) / remarksLen) * float64(len(remarks)))
+
+		pdf.SetXY(39, 142.5)
+		if remarksLen > line1Len+line2Len {
+			//Need 3 lines
+			remarks1 := remarks[:breakIndex1]
+			remarks2 := remarks[breakIndex1:breakIndex2]
+			remarks3 := remarks[breakIndex2:]
+			pdf.CellFormat(line1Len, lineHeight, remarks1, "", 0, "", false, 0, "")
+			pdf.SetXY(19, 151)
+			pdf.CellFormat(line2Len, lineHeight, remarks2, "", 0, "", false, 0, "")
+			pdf.SetXY(19, 159)
+			pdf.CellFormat(line3Len, lineHeight, remarks3, "", 0, "", false, 0, "")
+		} else if remarksLen > line1Len {
+			//Need 2 lines
+			remarks1 := remarks[:breakIndex1]
+			remarks2 := remarks[breakIndex1:]
+			pdf.CellFormat(line1Len, lineHeight, remarks1, "", 0, "", false, 0, "")
+			pdf.SetXY(19, 151)
+			pdf.CellFormat(line2Len, lineHeight, remarks2, "", 0, "", false, 0, "")
+		} else {
+			//Only need one line
+			pdf.CellFormat(line1Len, lineHeight, remarks, "", 0, "", false, 0, "")
+		}
+
+		pdf.SetFontSize(oldFontSize)
+	}
+
+	type Point struct {
+		X float64
+		Y float64
+	}
+	checks := map[string]Point{
+		"airCompressorTruck":   {18.5, 68},   //Air compressor
+		"airLinesTruck":        {18.5, 72.5}, //Air lines
+		"parkingBrakesTruck":   {18.5, 77},   //Brakes: Parking
+		"serviceBrakesTruck":   {18.5, 81.5}, //Brakes: Service Brakes
+		"batteryTruck":         {18.5, 86},   //Battery
+		"couplingDevicesTruck": {18.5, 90.5}, //Coupling devices
+		"emergencyTruck":       {18.5, 95},   //Emergency equipment
+		"fuelTanksTruck":       {18.5, 99.5}, //Fuel tanks
+		"hornTruck":            {18.5, 104},  //Horn
+
+		"lightingTruck":    {132.5, 68.1}, //Lighting devices
+		"mirrorsTruck":     {132.5, 72.6}, //Mirrors
+		"oilPressureTruck": {132.5, 77.1}, //Oil Pressure
+		"steeringTruck":    {132.5, 81.6}, //Steering mech
+		"tiresTruck":       {132.5, 86},   //tires
+		"transTruck":       {132.5, 90.5}, //Transmission
+		"wheelsTruck":      {132.5, 95},   //Wheels and Rims
+		"windshieldTruck":  {132.5, 99.5}, //Windshield wipers
+		"otherTruck":       {132.5, 104},  //Other
+
+		"brakesTrailer":          {18.5, 118.5}, //Brakes
+		"couplingDevicesTrailer": {18.5, 123},   //Coupling devices
+		"couplingPinTrailer":     {18.5, 127.5}, //Coupling pin
+		"doorsTrailer":           {18.5, 132},   //Doors
+		"hitchTrailer":           {18.5, 136.5}, //Hitch
+
+		"landingGearTrailer": {88.1, 118.7}, //Landing gear
+		"lightsTrailer":      {88.1, 123.2}, //Lights
+		"roofTrailer":        {88.1, 127.7}, //Roof
+		"tarpTrailer":        {88.1, 132.2}, //Tarpaulin
+		"tiresTrailer":       {88.1, 136.7}, //Tires
+
+		"springTrailer": {158, 118.7}, //Springs
+		"wheelsTrailer": {158, 123.2}, //Wheels
+		"otherTrailer":  {158, 127.7}, //Other
+
+		"conditionSat": {18, 162.3}, //Condition of the above vehicle is satisfactory
+
+		"defectsCorrected":   {18, 207},   //Above defects corrected
+		"defectsUncorrected": {18, 212.5}, //Above defects need not be corrected
+		"noDefects":          {18, 218},   //No defects to report
+
 	}
 
 	pdf := gofpdf.New("P", "mm", "A4", "")
 	pdf.AddPage()
-	pdf.SetFont("Arial", "", 10)
+	pdf.SetFont("Arial", "", 12)
 	pageW, pageH := pdf.GetPageSize()
 	pdf.Image("form3raw.png", 0, 0, pageW, 0, false, "", 0, "")
 
-	for _, point := range points {
-		pdf.Text(point.X, point.Y, point.Value)
+	_, lineH := pdf.GetFontSize()
+
+	for _, point := range textPoints {
+		pdf.SetXY(point.X, point.Y)
+		writeText(point.Value, point.Width, lineH, 0, false, pdf)
+		// pdf.CellFormat(point.Width, lineH, point.Value, "1", 0, "C", false, 0, "")
 	}
 
+	writeRemarks(data.Remarks, pdf)
+	pdf.SetFontSize(6)
 	for x := 0.0; x <= pageW; x = x + 10.0 {
 		for y := 0.0; y <= pageH; y = y + 10.0 {
 			// pdf.Text(x, y, fmt.Sprintf("(%.f,%.f)", x, y))
 		}
+	}
+
+	pdf.SetFontSize(8)
+	for _, point := range checks {
+		pdf.Image("check_mark.png", point.X, point.Y, 5, 0, false, "", 0, "")
 	}
 
 	pdf.OutputFileAndClose("example3.pdf")
