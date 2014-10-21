@@ -448,11 +448,12 @@ type Form3Data struct {
 		Operator      string `json:"operator"`
 		FracCompany   string `json:"fracCompany"`
 	} `json:"trailer"`
-	TruckNumber        string `json:"truckNumber"`
-	Odometer           int    `json:"odometer"`
-	Remarks            string `json:"remarks"`
-	DriverSignatureUrl string `json:"driverSignatureUrl"`
-	Date               string `json:"date"`
+	TruckNumber        string          `json:"truckNumber"`
+	Odometer           int             `json:"odometer"`
+	Remarks            string          `json:"remarks"`
+	DriverSignatureUrl string          `json:"driverSignatureUrl"`
+	Date               string          `json:"date"`
+	Checklist          map[string]bool `json:"checklist"`
 }
 
 func generatePdf3(data Form3Data) {
@@ -600,9 +601,15 @@ func generatePdf3(data Form3Data) {
 	}
 
 	pdf.SetFontSize(8)
-	for _, point := range checks {
-		pdf.Image("check_mark.png", point.X, point.Y, 5, 0, false, "", 0, "")
+	for key, value := range data.Checklist {
+		if value {
+			mark := checks[key]
+			pdf.Image("check_mark.png", mark.X, mark.Y, 5, 0, false, "", 0, "")
+		}
 	}
+	// for _, point := range checks {
+	// 	pdf.Image("check_mark.png", point.X, point.Y, 5, 0, false, "", 0, "")
+	// }
 
 	pdf.OutputFileAndClose("example3.pdf")
 }
